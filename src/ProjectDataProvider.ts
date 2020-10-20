@@ -318,4 +318,103 @@ export module ProjectDataProvider {
       depGenerator.stdin.end(StatusMessages.PYPI_INTERPRETOR_CMD);
     });
   };
+
+  // String -> [String]
+  function fileList(dir) {
+    return fs.readdirSync(dir).reduce(function (list, file) {
+      var name: string = paths.join(dir, file);
+      var isDir: boolean = fs.statSync(name).isDirectory();
+      if (isDir) {
+        return list.concat(fileList(name));
+      } else if (file.endsWith(".go")) {
+        console.log("Go file: " + name)
+        var pkg: string[] = []
+        var foundImport: boolean = false;
+        var content = fs.readFileSync(name).toString().split("\n")
+        for (var i = 0; i < content.length; i++) {
+          var element = content[i].trim();
+          if (!foundImport && element.startsWith("import")) {
+            foundImport = true;
+            //console.log("Found import section start");
+          }
+
+          if (foundImport && element.length > 0) {
+            var e = element
+            if (e.startsWith("import"))
+              e = e.replace("import", "")
+            e = e.replace("(", "").replace(")", "").trim()
+            if (e.length > 0) {
+              var p: string[] = e.split(" ");
+              if (p.length > 0) {
+                var p1: string = p[p.length - 1].replace(/\"/gi, "")
+                if (list.indexOf(p1) < 0)
+                  list.push(p1)
+              }
+            }
+
+            //console.log("element: " + element + " pkg: " + pkg);
+          }
+
+          if (foundImport && element.endsWith(")")) {
+            //console.log("Found import section end");
+            break;
+          }
+        }
+      }
+      return list
+    }, []);
+  }
+
+  export const effectivef8Golang = item => {
+    return new Promise((resolve, reject) => {
+      const outputChannelDep = isOutputChannelActivated();
+      outputChannelDep.clearOutputChannel();
+      let vscodeRootpath = item.replace('go.mod', '');
+      let targetDir = paths.join(vscodeRootpath, 'target');
+      const goGraphFilePath = paths.join(targetDir, 'gograph.txt');
+
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir);
+      }
+
+      //const startTime = new Date().getTime();
+      //let files = fileList(vscodeRootpath);
+      //console.log("Time taken for scanning source with " + files.length + " packages was " + (new Date().getTime() - startTime));
+
+      const cmd: string = [
+        `cd`,
+        `"${vscodeRootpath}" &&`,
+        Utils.getGoExecutable(),
+        `mod`,
+        `graph`,
+        `>`,
+        `"${goGraphFilePath}"`,
+      ].join(' ');
+      console.log('CMD : ' + cmd);
+      outputChannelDep.addMsgOutputChannel('\n CMD :' + cmd);
+      exec(
+        cmd,
+        { maxBuffer: 1024 * 1200 },
+        (error: Error, _stdout: string, _stderr: string): void => {
+          let outputMsg = `\n STDOUT : ${_stdout} \n STDERR : ${_stderr}`;
+          outputChannelDep.addMsgOutputChannel(outputMsg);
+          if (error) {
+            vscode.window
+              .showErrorMessage(`${error.message}.`, 'Show Output Log ...')
+              .then((selection: any) => {
+                if (selection === 'Show Output Log ...') {
+                  vscode.commands.executeCommand(Commands.TRIGGER_STACK_LOGS);
+                }
+              });
+            console.log('_stdout :' + _stdout);
+            console.log('_stderr :' + _stderr);
+            console.log('error :' + error);
+            reject(false);
+          } else {
+            resolve(goGraphFilePath);
+          }
+        }
+      );
+    });
+  };
 }

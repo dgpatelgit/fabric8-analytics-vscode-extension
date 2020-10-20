@@ -77,7 +77,8 @@ export function activate(context: vscode.ExtensionContext) {
           { scheme: 'file', language: 'json' },
           { scheme: 'file', language: 'xml' },
           { scheme: 'file', language: 'plaintext' },
-          { scheme: 'file', language: 'pip-requirements' }
+          { scheme: 'file', language: 'pip-requirements' },
+          { scheme: 'file', language: 'go' }
         ],
         synchronize: {
           // Synchronize the setting section 'dependencyAnalyticsServer' to the server
@@ -142,14 +143,9 @@ export function activate(context: vscode.ExtensionContext) {
           }
         });
         lspClient.onNotification('caError', respData => {
-          if (
-            respData &&
-            respData.hasOwnProperty('data') &&
-            vscode.window.activeTextEditor
-          ) {
-            onFileOpen.push(vscode.window.activeTextEditor.document.fileName);
-            showErrorOnfileOpen(respData.data);
-          }
+          diagCountInfo = respData.diagCount;
+          onFileOpen.push(vscode.window.activeTextEditor.document.fileName);
+          showErrorOnfileOpen(respData.data);
         });
       });
       context.subscriptions.push(
