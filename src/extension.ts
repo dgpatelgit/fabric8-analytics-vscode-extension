@@ -142,6 +142,7 @@ export function activate(context: vscode.ExtensionContext) {
             );
           }
         });
+
         lspClient.onNotification('caError', respData => {
           diagCountInfo = respData.diagCount;
           onFileOpen.push(vscode.window.activeTextEditor.document.fileName);
