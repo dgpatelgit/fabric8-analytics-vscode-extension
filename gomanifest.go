@@ -244,6 +244,7 @@ func buildManifest() {
 	f.Sync()
 
 	defer f.Close()
+	fmt.Println("Success :: Manifest generated & stored at ", manifestFilePath)
 }
 
 func flatenTransitives(transtivies []Transitive) string {
@@ -310,6 +311,7 @@ func buildManifest2() {
 	f.Sync()
 
 	defer f.Close()
+	fmt.Println("Success :: Manifest generated and stored at ", manifestFilePath)
 }
 
 func main() {
